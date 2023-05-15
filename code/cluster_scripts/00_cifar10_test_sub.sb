@@ -1,4 +1,4 @@
-executable = cluster_scripts/cifar10_test.sh
+executable = cluster_scripts/00_cifar10_test.sh
 arguments = $(Process)
 log =    joblogs/cifar10_test_$(Process).log.txt
 getenv = True
