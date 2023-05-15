@@ -301,6 +301,11 @@ def main():
       create_checkpoint(feat_emb, gen, m_avg, optimizers, step, fixed_noise, arg.log_dir,
                         event_steps.new_ckpt, best_result, best_proxy_result)
 
+    if (event_steps.restart is not None) and (step % event_steps.restart == 0) \
+            and event_steps.restart > 0 and step != event_steps.final:
+      LOG.info(f'preparing restart at step {step}')
+      exit(3)
+
     gen.train()
 
   LOG.info('completed training')
