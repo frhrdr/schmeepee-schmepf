@@ -281,7 +281,7 @@ def main():
 
       log_losses_and_imgs(gen, acc_losses, fixed_noise,
                           step, writer, event_steps.final,
-                          event_steps.valid, arg.log_dir, arg.exp_name)
+                          event_steps.eval, arg.log_dir, arg.exp_name)
       acc_losses = LossAccumulator()
 
       syn_data_file, eval_score = log_synth_data_eval(gen, writer, step, noise_maker, device,
