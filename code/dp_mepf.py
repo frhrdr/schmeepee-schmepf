@@ -167,7 +167,7 @@ def main():
     delayed_log(level, message)
   n_classes_val = None  # val loss always unlabeled
 
-  ckpt, arg.first_batch_id = load_checkpoint(arg.log_dir, arg.first_batch_id, device)
+  ckpt, arg.first_batch_id = load_checkpoint(arg.log_dir, arg.first_batch_id)
 
   LOG.info("Args: {}".format(arg))
   LOG.info(f'running rank {device} on device: {pt.cuda.get_device_name(device)}')
