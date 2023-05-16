@@ -13,5 +13,4 @@ pandas~=1.4.2
 filelock~=3.7.1
 pyHSICLasso~=1.4.2
 prdc~=0.2
-functorch~=0.2
 backpack-for-pytorch~=1.5.0

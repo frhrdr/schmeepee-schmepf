@@ -10,7 +10,7 @@ periodic_release = ( (JobStatus =?= 5) && (HoldReasonCode =?= 3) && (HoldReasonS
 error =  joblogs/oct12_celeba_prelim_results_nondp_$(Process).err.txt
 output = joblogs/oct12_celeba_prelim_results_nondp_$(Process).out.txt
 request_gpus = 1
-requirements = (CUDACapability >= 3.7) && (CUDACapability <= 7.0)
+requirements = (CUDACapability >= 3.7)
 request_memory = 12GB
 +MaxRunningPrice = 2000
 +RunningPriceExceededAction = "restart"
