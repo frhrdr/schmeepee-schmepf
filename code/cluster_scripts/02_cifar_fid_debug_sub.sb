@@ -14,4 +14,4 @@ requirements = (CUDACapability >= 3.7)
 request_memory = 12GB
 +MaxRunningPrice = 2000
 +RunningPriceExceededAction = "restart"
-queue 1
+queue 2
