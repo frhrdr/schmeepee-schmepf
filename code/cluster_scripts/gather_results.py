@@ -225,8 +225,7 @@ def main():
   parser = argparse.ArgumentParser()
 
   # PARAMS YOU LIKELY WANT TO SET
-  parser.add_argument('--base_logdirs', default=['/home/fharder/dp-gfmn/logs/',
-                                                 '/home/frederik/PycharmProjects/dp-gfmn/logs/'])
+  parser.add_argument('--base_logdir', default='../logs/')
   parser.add_argument('--logdirs', '-l', nargs='*')
   parser.add_argument('--intermediate_results', '-ir', action='store_true')
   parser.add_argument('--average_groups_of_n', '-avgn', type=int, default=None)
