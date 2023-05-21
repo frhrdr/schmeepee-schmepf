@@ -59,8 +59,8 @@ def store_data_stats(dataset_name, image_size, center_crop_size, dataroot, data_
 
 
 def embedding_file(dataset_name, image_size, data_scale):
-  bounded_str = '_bounded' if data_scale == 'bounded' else ''
-  return f'{dataset_name}_{image_size}{bounded_str}.npz'
+  scale_str = '' if data_scale is None else f'_{data_scale}'
+  return f'{dataset_name}_{image_size}{scale_str}.npz'
 
 
 def get_fid_scores(synth_data_file, dataset_name, device, n_samples,
@@ -76,11 +76,13 @@ def get_fid_scores(synth_data_file, dataset_name, device, n_samples,
   model = InceptionV3([block_idx]).to(device)
 
   if not os.path.exists(real_data_stats_file):
+    print(f'fid stats not found at {real_data_stats_file}. computing new stats')
     store_data_stats(dataset_name, image_size, center_crop_size, base_data_dir, data_scale)
 
   stats = np.load(real_data_stats_file)
   mu_real, sig_real = stats['mu'], stats['sig']
 
+  print('computing synth data stats')
   synth_data_loader = load_synth_dataset(synth_data_file, batch_size, n_samples)
   mu_syn, sig_syn = stats_from_dataloader(synth_data_loader, model, device)
 
@@ -99,7 +101,7 @@ def get_fid_scores_fixed(synth_data_file, dataset_name, device, n_samples,
 
   block_idx = InceptionV3.BLOCK_INDEX_BY_DIM[dims]
 
-  model = InceptionV3([block_idx], normalize_input=False).to(device)
+  model = InceptionV3([block_idx], normalize_input=True).to(device)
 
   if not os.path.exists(real_data_stats_file):
     store_data_stats(dataset_name, image_size, center_crop_size, base_data_dir, target_data_scale)
@@ -129,11 +131,13 @@ def stats_from_dataloader(dataloader, model, device='cpu'):
   pred_list = []
 
   start_idx = 0
-
+  n_prints = 5
   for batch in tqdm(dataloader):
     x = batch[0] if (isinstance(batch, tuple) or isinstance(batch, list)) else batch
     x = x.to(device)
-
+    if n_prints > 0:
+      print(f'stats_from_dataloader data scale. batch max={pt.max(x)}, min={pt.min(x)}')
+      n_prints -= 1
     with pt.no_grad():
       pred = model(x)[0]
 

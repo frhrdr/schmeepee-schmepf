@@ -1,0 +1,17 @@
+executable = cluster_scripts/02_cifar_fid_debug.sh
+arguments = $(Process)
+log =    joblogs/02_cifar_fid_debug_$(Process).log.txt
+getenv = True
+request_cpus = 1
+on_exit_hold = (ExitCode =?= 3)
+on_exit_hold_reason = "Checkpointed, will resume"
+on_exit_hold_subcode = 1
+periodic_release = ( (JobStatus =?= 5) && (HoldReasonCode =?= 3) && (HoldReasonSubCode =?= 1) )
+error =  joblogs/02_cifar_fid_debug_$(Process).err.txt
+output = joblogs/02_cifar_fid_debug_$(Process).out.txt
+request_gpus = 1
+requirements = (CUDACapability >= 3.7)
+request_memory = 12GB
++MaxRunningPrice = 2000
++RunningPriceExceededAction = "restart"
+queue 1
