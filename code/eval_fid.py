@@ -137,6 +137,7 @@ def stats_from_dataloader(dataloader, model, device='cpu'):
     x = x.to(device)
     if n_prints > 0:
       print(f'stats_from_dataloader data scale. batch max={pt.max(x)}, min={pt.min(x)}')
+      print(f'stats_from_dataloader data scale. batch q0.9={pt.quantile(x, q=0.9)}, q0.1={pt.quantile(x, q=0.1)}')
       n_prints -= 1
     with pt.no_grad():
       pred = model(x)[0]
