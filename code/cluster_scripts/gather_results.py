@@ -241,14 +241,9 @@ def main():
   parser.add_argument('--pre_proxy', action='store_true', help='set if old log without proxy fid')
   parser.add_argument('--print_best_steps', '-s', action='store_true', help='print best iterations')
   arg = parser.parse_args()
-  base_logdir = None
-  for base_dir in arg.base_logdirs:
-    if os.path.exists(base_dir):
-      base_logdir = base_dir
-      break
-  assert base_logdir
+
   for subdir in arg.logdirs:
-    log_dir = os.path.join(base_logdir, subdir)
+    log_dir = os.path.join(arg.base_logdir, subdir)
     if arg.view is not None:
       view_table(os.path.join(log_dir, arg.view), arg.view_metrics, arg.view_true, arg.view_false,
                  arg.view_val)
