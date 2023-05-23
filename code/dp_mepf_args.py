@@ -5,7 +5,7 @@ import numpy as np
 import torch as pt
 from dp_analysis import find_single_release_sigma, find_two_release_sigma, \
   find_train_val_sigma_m1, find_train_val_sigma_m1m2
-
+from data_loading import IMAGENET_MEAN, IMAGENET_SDEV
 from util_logging import get_base_log_dir
 from typing import NamedTuple
 
@@ -34,10 +34,13 @@ def get_args():
 
   parser.add_argument('--gen_output', type=str, default='linear', choices=['tanh', 'linear'],
                       help='tanh: output in range [-1,1]. linear: output unbounded')
-  parser.add_argument('--data_scale', type=str, default='normed', choices=['bounded', 'normed'],
+  parser.add_argument('--data_scale', type=str, default='normed', choices=['bounded', 'normed', '0_1'],
                       help='bounded: in range [-1,1]. normed: scaled to imagenet mean and var')
   parser.add_argument('--keep_best_syn_data', action='store_true',
                       help="if true, don't delete highest scoring synthetic dataset")
+  parser.add_argument('--extra_input_scaling', type=str, default='none',
+                      choices=['dataset_norm', 'imagenet_norm', 'none'],
+                      help='if true and data in scale 0_1, rescale to norm for encoder')
 
   # MOMENT MATCHING OPTIONS
   parser.add_argument('--matched_moments', type=str, default='m1_and_m2',
@@ -246,8 +249,8 @@ def set_arg_dependencies(arg):
 
 
 def get_imagenet_norm_min_and_range(device):
-  imagenet_norm_mean = np.asarray([0.485, 0.456, 0.406], dtype=np.float32)
-  imagenet_norm_std = np.asarray([0.229, 0.224, 0.225], dtype=np.float32)
+  imagenet_norm_mean = np.asarray(IMAGENET_MEAN, dtype=np.float32)
+  imagenet_norm_std = np.asarray(IMAGENET_SDEV, dtype=np.float32)
   imagenet_norm_min = -imagenet_norm_mean / imagenet_norm_std
   imagenet_norm_max = (1.0 - imagenet_norm_mean) / imagenet_norm_std
   imagenet_norm_range = imagenet_norm_max - imagenet_norm_min

@@ -12,6 +12,7 @@ from eval_accuracy import synth_to_real_test
 from eval_fid import get_fid_scores, get_fid_scores_fixed
 from eval_prdc import get_prdc
 from mnist_synth_data_benchmark import prep_models, model_test_run
+from data_loading import IMAGENET_MEAN, IMAGENET_SDEV
 LOG = colorlog.getLogger(__name__)
 
 
@@ -113,8 +114,8 @@ def log_losses_and_imgs(net_gen, train_acc_losses, fixed_noise,
 
   data_to_print = fake.data[:100]
   vutils.save_image(data_to_print, img_path, normalize=True, nrow=10)
-  mean_tsr = pt.tensor([0.485, 0.456, 0.406], device=fake.device)
-  sdev_tsr = pt.tensor([0.229, 0.224, 0.225], device=fake.device)
+  mean_tsr = pt.tensor(IMAGENET_MEAN, device=fake.device)
+  sdev_tsr = pt.tensor(IMAGENET_SDEV, device=fake.device)
   data_to_print = data_to_print * sdev_tsr[None, :, None, None] + mean_tsr[None, :, None, None]
   LOG.info(f'')
   data_to_print = pt.clamp(data_to_print, min=0., max=1.)

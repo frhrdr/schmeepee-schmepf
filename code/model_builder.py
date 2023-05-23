@@ -274,7 +274,7 @@ def set_layer_hook(model_name, layer, layer_name, feats_dict):
 
 
 def get_torchvision_encoders(encoder_names, image_size, device, pretrain_dataset, n_classes_in_enc,
-                             n_split_layers, n_classes):
+                             n_split_layers, n_classes, input_scalings=None):
   if pretrain_dataset in {'svhn', 'cifar10_pretrain'}:
     assert len(encoder_names) == 1
     return small_data_model(pretrain_dataset, encoder_names[0], device, image_size)
@@ -353,7 +353,7 @@ def get_torchvision_encoders(encoder_names, image_size, device, pretrain_dataset
     LOG.info(f'# Encoder :{encoder_name}')
     for param in enc.parameters():
       param.requires_grad = False
-  return Encoders(models_dict, feats_dict, n_split_layers, n_classes)
+  return Encoders(models_dict, feats_dict, n_split_layers, n_classes, input_scalings)
 
 
 # def get_encoders(net_enc_types, net_enc_files, image_size, z_dim, n_classes_in_enc, device,

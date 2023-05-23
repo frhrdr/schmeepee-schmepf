@@ -120,6 +120,7 @@ def extract_features(data_batch, net_enc, channel_ids_by_enc, n_matching_layers,
 
 def extract_features_with_hooks(data_batch, encoders: Encoders):
   for encoder_name in encoders.models:
+    data_batch = encoders.rescale_batch_input(data_batch, encoder_name)
     encoders.models[encoder_name](data_batch)
     return [k.contiguous().view(k.shape[0], -1) for k in encoders.layer_feats.values()]
 

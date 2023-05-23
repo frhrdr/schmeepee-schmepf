@@ -152,6 +152,41 @@ def load_best_result(best_result: BestResult, best_proxy_result: BestResult, ckp
     best_proxy_result.data_file = ckpt['best_proxy_syn_data_file']
 
 
+def get_enc_input_scalings(net_enc_type, dataset, image_size, data_scale, extra_input_scaling):
+  if extra_input_scaling == 'none':
+    return None
+
+  assert data_scale == '0_1'
+  scalings_by_dataset = {'imagenet': '0_1_to_IMGNet_Norm',
+                         'cifar10': '0_1_to_Cifar10_Norm',
+                         'celeba32': '0_1_to_Celeba32_Norm',
+                         'celeba64': '0_1_to_Celeba64_Norm'}
+
+  # pick the right scaling name
+  if extra_input_scaling == 'dataset_norm':
+    if dataset == 'cifar10':
+      scaling = scalings_by_dataset['cifar10']
+    elif dataset == 'celeba':
+      if image_size == 32:
+        scaling = scalings_by_dataset['celeba32']
+      elif image_size == 64:
+        scaling = scalings_by_dataset['celeba64']
+      else:
+        raise ValueError
+    else:
+      raise ValueError
+
+  elif extra_input_scaling == 'imagenet_norm':
+    scaling = scalings_by_dataset['imagenet']
+  else:
+    raise ValueError
+
+  scaling_by_model = dict()
+  for net_enc_name in net_enc_type:
+    scaling_by_model[net_enc_name] = scaling
+  return scaling_by_model
+
+
 def main():
   arg = get_args()
   os.makedirs(arg.log_dir, exist_ok=True)
@@ -186,13 +221,16 @@ def main():
                                          arg.dataroot, arg.batch_size, arg.n_workers,
                                          arg.data_scale, arg.labeled)
 
+  enc_input_scalings = get_enc_input_scalings(arg.net_enc_type, arg.dataset, arg.image_size,
+                                              arg.data_scale, arg.extra_input_scaling)
+
   encoders = get_torchvision_encoders(arg.net_enc_type, arg.image_size, device,
                                       arg.pretrain_dataset, arg.n_classes_in_enc,
-                                      arg.n_split_layers, n_classes)
+                                      arg.n_split_layers, n_classes, enc_input_scalings)
   if arg.val_enc is not None:
     val_encoders = get_torchvision_encoders(arg.val_enc, arg.image_size, device,
                                             arg.pretrain_dataset, arg.n_classes_in_enc,
-                                            arg.n_split_layers, n_classes)
+                                            arg.n_split_layers, n_classes, enc_input_scalings)
   else:
     val_encoders = encoders
   get_number_of_matching_layers_pytorch(encoders, device, train_loader)

@@ -6,6 +6,15 @@ import torchvision.transforms as transforms
 import torchvision.datasets as dset
 import numpy as np
 
+IMAGENET_MEAN = [0.485, 0.456, 0.406]
+IMAGENET_SDEV = [0.229, 0.224, 0.225]
+CIFAR10_MEAN = [0.4914, 0.482, 0.447]
+CIFAR10_SDEV = [0.247, 0.243, 0.262]
+CELEBA32_MEAN = [0.508, 0.421, 0.375]
+CELEBA32_SDEV = [0.294, 0.271, 0.269]
+CELEBA64_MEAN = [0.508, 0.422, 0.377]
+CELEBA64_SDEV = [0.301, 0.279, 0.277]
+
 
 def shift_data_transform(x):
   return 2 * x - 1
@@ -13,7 +22,7 @@ def shift_data_transform(x):
 
 def scale_transform(data_scale):
   if data_scale == 'normed':
-    return transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])
+    return transforms.Normalize(mean=IMAGENET_MEAN, std=IMAGENET_SDEV)
   elif data_scale == 'bounded':
     return transforms.Lambda(shift_data_transform)
   elif data_scale == 'normed05':
@@ -165,8 +174,8 @@ def load_synth_dataset(data_file, batch_size, subset_size=None, to_tensor=False,
       assert source_data_scale is not None
       assert target_data_scale == '0_1'
       if source_data_scale == 'normed':
-        mean = np.asarray([0.485, 0.456, 0.406], dtype=np.float32)
-        sdev = np.asarray([0.229, 0.224, 0.225], dtype=np.float32)
+        mean = np.asarray(IMAGENET_MEAN, dtype=np.float32)
+        sdev = np.asarray(IMAGENET_SDEV, dtype=np.float32)
       elif source_data_scale == 'bounded':
         mean = np.asarray([0.5, 0.5, 0.5], dtype=np.float32)
         sdev = np.asarray([0.5, 0.5, 0.5], dtype=np.float32)

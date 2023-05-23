@@ -6,12 +6,11 @@ import torchvision.datasets as dset
 from pytorch_fid.fid_score import calculate_frechet_distance
 from pytorch_fid.inception import InceptionV3
 from tqdm import tqdm
-from data_loading import load_synth_dataset, load_dataset, load_imagenet_32
-
+from data_loading import load_synth_dataset, load_dataset, load_imagenet_32, IMAGENET_MEAN, IMAGENET_SDEV
 
 def cifar10_stats(model, device, batch_size, workers, image_size=32, dataroot='../data'):
   transformations = [transforms.Resize(image_size), transforms.ToTensor(),
-                     transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])]
+                     transforms.Normalize(mean=IMAGENET_MEAN, std=IMAGENET_SDEV)]
   dataset = dset.CIFAR10(root=dataroot, download=True,
                          transform=transforms.Compose(transformations))
   assert dataset
@@ -131,7 +130,7 @@ def stats_from_dataloader(dataloader, model, device='cpu'):
   pred_list = []
 
   start_idx = 0
-  n_prints = 5
+  n_prints = 2
   for batch in tqdm(dataloader):
     x = batch[0] if (isinstance(batch, tuple) or isinstance(batch, list)) else batch
     x = x.to(device)

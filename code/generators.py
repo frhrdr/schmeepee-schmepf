@@ -123,7 +123,10 @@ class ResnetG(nn.Module):
     self.net = nn.Sequential(nn_layers)
 
   def forward(self, x):
-    return self.net(x)
+    x = self.net(x)
+    if self.gen_output == 'tanh':
+      x = x/2 + 0.5
+    return x
 
 
 class Upsample(nn.Module):
