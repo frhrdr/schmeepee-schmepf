@@ -5,7 +5,7 @@ from data_loading import IMAGENET_MEAN, IMAGENET_SDEV, CIFAR10_MEAN, CIFAR10_SDE
 
 
 class Encoders:
-  def __init__(self, models: dict, layer_acts: dict, n_split_layers: int, n_classes: int = None,
+  def __init__(self, models: dict, layer_acts: dict, n_split_layers: int, device, n_classes: int = None,
                input_scalings: dict = None):
     self.models = models
     self.layer_feats = layer_acts
@@ -14,7 +14,7 @@ class Encoders:
     self.n_feats_by_layer = OrderedDict()
     self._n_feats_total = None
     self._n_split_features = None
-    self.device = models[list(models)[0]].device
+    self.device = device
     self.input_scaling_names = input_scalings
     self.input_scaling_tensors = None
     self.initialize_input_scalings()

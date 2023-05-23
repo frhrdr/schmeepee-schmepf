@@ -353,7 +353,7 @@ def get_torchvision_encoders(encoder_names, image_size, device, pretrain_dataset
     LOG.info(f'# Encoder :{encoder_name}')
     for param in enc.parameters():
       param.requires_grad = False
-  return Encoders(models_dict, feats_dict, n_split_layers, n_classes, input_scalings)
+  return Encoders(models_dict, feats_dict, n_split_layers, device, n_classes, input_scalings)
 
 
 # def get_encoders(net_enc_types, net_enc_files, image_size, z_dim, n_classes_in_enc, device,
