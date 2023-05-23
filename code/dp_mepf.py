@@ -221,16 +221,16 @@ def main():
                                          arg.dataroot, arg.batch_size, arg.n_workers,
                                          arg.data_scale, arg.labeled)
 
-  enc_input_scalings = get_enc_input_scalings(arg.net_enc_type, arg.dataset, arg.image_size,
-                                              arg.data_scale, arg.extra_input_scaling)
+  train_enc_input_scalings = get_enc_input_scalings(arg.net_enc_type, arg.dataset, arg.image_size,
+                                                    arg.data_scale, arg.extra_input_scaling)
 
   encoders = get_torchvision_encoders(arg.net_enc_type, arg.image_size, device,
                                       arg.pretrain_dataset, arg.n_classes_in_enc,
-                                      arg.n_split_layers, n_classes, enc_input_scalings)
+                                      arg.n_split_layers, n_classes, train_enc_input_scalings)
   if arg.val_enc is not None:
     val_encoders = get_torchvision_encoders(arg.val_enc, arg.image_size, device,
                                             arg.pretrain_dataset, arg.n_classes_in_enc,
-                                            arg.n_split_layers, n_classes, enc_input_scalings)
+                                            arg.n_split_layers, n_classes)
   else:
     val_encoders = encoders
   get_number_of_matching_layers_pytorch(encoders, device, train_loader)
