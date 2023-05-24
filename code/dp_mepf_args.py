@@ -32,9 +32,9 @@ def get_args():
   parser.add_argument('--pretrain_dataset', default=None,
                       choices=[None, 'imagenet', 'svhn', 'cifar10'], help='set automatically')
 
-  parser.add_argument('--gen_output', type=str, default='linear', choices=['tanh', 'linear'],
+  parser.add_argument('--gen_output', type=str, default='tanh', choices=['tanh', 'linear'],
                       help='tanh: output in range [-1,1]. linear: output unbounded')
-  parser.add_argument('--data_scale', type=str, default='normed', choices=['bounded', 'normed', '0_1'],
+  parser.add_argument('--data_scale', type=str, default='0_1', choices=['bounded', 'normed', '0_1'],
                       help='bounded: in range [-1,1]. normed: scaled to imagenet mean and var')
   parser.add_argument('--keep_best_syn_data', action='store_true',
                       help="if true, don't delete highest scoring synthetic dataset")

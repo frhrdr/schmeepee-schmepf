@@ -98,11 +98,11 @@ def eval_stop_criterion(stop_criterion_scores, dataset):
   return stop_now
 
 
-def delete_old_syn_data(syn_data_file, old_syn_data_file, best_result, step, keep_best_syn_data):
+def delete_old_syn_data(syn_data_file, old_syn_data_file, best_proxy_result, step, keep_best_syn_data):
   if keep_best_syn_data:
     # remove syn data files that are not among the best results
     if old_syn_data_file is not None:
-      if best_result.step == step:
+      if best_proxy_result.step == step:
         os.remove(old_syn_data_file)
         old_syn_data_file = syn_data_file
       else:
@@ -332,7 +332,7 @@ def main():
       update_best_score(eval_score, step, syn_data_file, arg.dataset, best_result)
       update_best_proxy_score(static_val_loss, step, syn_data_file, best_proxy_result)
 
-      old_syn_data_file = delete_old_syn_data(syn_data_file, old_syn_data_file, best_result, step,
+      old_syn_data_file = delete_old_syn_data(syn_data_file, old_syn_data_file, best_proxy_result, step,
                                               arg.keep_best_syn_data)
 
     if step % event_steps.ckpt == 0:
@@ -365,8 +365,7 @@ def main():
                                      do_second_moment_val, writer, arg.n_iter)
     static_val_loss = lm + lv
     update_best_proxy_score(static_val_loss, arg.n_iter, syn_data_file, best_proxy_result)
-    if not arg.keep_best_syn_data:
-      os.remove(syn_data_file)
+    os.remove(syn_data_file)
 
   if writer is not None:
     writer.close()
