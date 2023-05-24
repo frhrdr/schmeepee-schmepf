@@ -274,8 +274,7 @@ def main():
 
   LOG.info('starting training loop')
 
-  old_syn_data_file = best_result.data_file
-  static_val_loss = None
+  old_syn_data_file = best_proxy_result.data_file
   #######################################################
   # GFMN Training Loop.
   #######################################################
