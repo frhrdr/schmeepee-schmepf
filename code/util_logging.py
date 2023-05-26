@@ -199,7 +199,7 @@ def log_synth_data_eval(net_gen, writer, step, noise_maker, device, dataset, syn
     syn_data_save_dir = log_dir
     run_fid_locally = False
 
-  LOG.info(f'generating synthetic dataset')
+  LOG.info(f'generating synthetic dataset at dir={syn_data_save_dir}')
   # syn_data_file_name = f'synth_data_it{step + 1}'
   syn_data_file = create_synth_dataset(synth_dataset_size, net_gen, batch_size,
                                        noise_maker, device, save_dir=syn_data_save_dir,
@@ -268,8 +268,10 @@ def log_synth_data_eval(net_gen, writer, step, noise_maker, device, dataset, syn
 
   # after the evaluation, copy over synthetic data file to central storage
   if run_fid_locally:
+    LOG.info(f'copying syn data from {syn_data_file} to {log_dir}')
     shutil.copy(syn_data_file, log_dir)
     syn_data_file = os.path.join(log_dir, syn_data_file.split('/')[-1])
+    assert os.path.exists(syn_data_file)
 
   return syn_data_file, return_score
 
