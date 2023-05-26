@@ -8,6 +8,7 @@ from pytorch_fid.inception import InceptionV3
 from tqdm import tqdm
 from data_loading import load_synth_dataset, load_dataset, load_imagenet_numpy, IMAGENET_MEAN, IMAGENET_SDEV
 
+
 def cifar10_stats(model, device, batch_size, workers, image_size=32, dataroot='../data'):
   transformations = [transforms.Resize(image_size), transforms.ToTensor(),
                      transforms.Normalize(mean=IMAGENET_MEAN, std=IMAGENET_SDEV)]
