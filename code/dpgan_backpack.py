@@ -156,11 +156,15 @@ def create_fid_dataset(net_gen, nz, device, save_dir='.', file_name='synth_data'
   batches = [batch_size] * (n_samples // batch_size)
 
   samples_list = []
+  n_prints = 3
   with pt.no_grad():
     for batch in batches:
       z_in = pt.randn(batch, nz, 1, 1, device=device)
       syn_batch = net_gen(z_in)
       samples_list.append(syn_batch.detach().cpu())
+      if n_prints > 0:
+        print(f'dpgan dataset ranges: max={pt.max(syn_batch)}, min={pt.min(syn_batch)}')
+        n_prints -= 1
     samples = pt.cat(samples_list, dim=0)
 
   file_name = file_name if file_name.endswith('.npz') else file_name + '.npz'
