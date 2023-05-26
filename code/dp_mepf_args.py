@@ -42,6 +42,16 @@ def get_args():
                       choices=['dataset_norm', 'imagenet_norm', 'none'],
                       help='if true and data in scale 0_1, rescale to norm for encoder')
 
+  # ways to shortcut some data loading and eval
+  parser.add_argument('--n_features_in_enc', type=int, default=None,
+                      choices=[None, 303104, 1212416],  # vgg19 at 32x32 and at 64x64 data
+                      help='hardcode number of feats so it doesnt have to be computed using data')
+  parser.add_argument('--n_classes', type=int, default=None,
+                      choices=[None, 0, 10],
+                      help='hardcode number of classes so it doesnt have to be computed using data')
+  parser.add_argument('--skip_prdc', action='store_true',
+                      help="if true, don't compute prdc scores to save time")
+
   # MOMENT MATCHING OPTIONS
   parser.add_argument('--matched_moments', type=str, default='m1_and_m2',
                       choices=['mean_and_var', 'mean', 'm1_and_m2'],
@@ -85,6 +95,7 @@ def get_args():
                       help='whether to load a generator (i.e. continue run)')
   parser.add_argument('--local_fid_eval_storage', type=str, default='/tmp/',
                       help='if not none, store syn data on local machine first for quicker access')
+
 
   # FID SCORE AND SYNTH DATA
   parser.add_argument('--synth_dataset_size', type=int, default=None,

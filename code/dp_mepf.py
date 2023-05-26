@@ -103,15 +103,24 @@ def delete_old_syn_data(syn_data_file, old_syn_data_file, best_proxy_result, ste
     # remove syn data files that are not among the best results
     if old_syn_data_file is not None:
       if best_proxy_result.step == step:
-        os.remove(old_syn_data_file)
+        try:
+          os.remove(old_syn_data_file)
+        except FileNotFoundError as fnf_e:
+            LOG.warning(f'failed to delete old syn data file: {fnf_e}')
         old_syn_data_file = syn_data_file
       else:
-        os.remove(syn_data_file)
+        try:
+          os.remove(syn_data_file)
+        except FileNotFoundError as fnf_e:
+            LOG.warning(f'failed to delete old syn data file: {fnf_e}')
     else:
       old_syn_data_file = syn_data_file
   else:
     # remove syn data files
-    os.remove(syn_data_file)
+    try:
+      os.remove(syn_data_file)
+    except FileNotFoundError as fnf_e:
+        LOG.warning(f'failed to delete old syn data file: {fnf_e}')
   return old_syn_data_file
 
 
@@ -217,9 +226,16 @@ def main():
 
   set_random_seed(arg.manual_seed)
 
-  train_loader, n_classes = load_dataset(arg.dataset, arg.image_size, arg.center_crop_size,
-                                         arg.dataroot, arg.batch_size, arg.n_workers,
-                                         arg.data_scale, arg.labeled)
+  if ckpt is not None and arg.n_features_in_enc is not None \
+          and arg.n_classes is not None and arg.n_split_layers is None:
+    n_classes = arg.n_classes if arg.n_classes > 0 else None
+    n_features_in_enc = arg.n_features_in_enc
+    train_loader = None
+  else:
+    train_loader, n_classes = load_dataset(arg.dataset, arg.image_size, arg.center_crop_size,
+                                           arg.dataroot, arg.batch_size, arg.n_workers,
+                                           arg.data_scale, arg.labeled)
+    n_features_in_enc = None
 
   train_enc_input_scalings = get_enc_input_scalings(arg.net_enc_type, arg.dataset, arg.image_size,
                                                     arg.data_scale, arg.extra_input_scaling)
@@ -227,14 +243,17 @@ def main():
   encoders = get_torchvision_encoders(arg.net_enc_type, arg.image_size, device,
                                       arg.pretrain_dataset, arg.n_classes_in_enc,
                                       arg.n_split_layers, n_classes, train_enc_input_scalings)
+
   if arg.val_enc is not None:
     val_encoders = get_torchvision_encoders(arg.val_enc, arg.image_size, device,
                                             arg.pretrain_dataset, arg.n_classes_in_enc,
                                             arg.n_split_layers, n_classes)
   else:
     val_encoders = encoders
-  get_number_of_matching_layers_pytorch(encoders, device, train_loader)
-  n_features_in_enc = encoders.n_feats_total
+
+  if n_features_in_enc is None:
+    get_number_of_matching_layers_pytorch(encoders, device, train_loader)
+    n_features_in_enc = encoders.n_feats_total
   n_matching_layers = None
   channel_ids_by_enc = None
 
@@ -326,7 +345,7 @@ def main():
                                                       arg.batch_size, arg.log_dir,
                                                       n_classes, arg.fid_dataset_size,
                                                       arg.image_size, arg.center_crop_size,
-                                                      arg.data_scale, arg.local_fid_eval_storage,
+                                                      arg.data_scale, arg.local_fid_eval_storage, arg.skip_prdc,
                                                       final_step=False)
 
       update_best_score(eval_score, step, syn_data_file, arg.dataset, best_result)
@@ -354,7 +373,7 @@ def main():
                                                     arg.batch_size, arg.log_dir, n_classes,
                                                     arg.fid_dataset_size, arg.image_size,
                                                     arg.center_crop_size, arg.data_scale,
-                                                    arg.local_fid_eval_storage, final_step=True)
+                                                    arg.local_fid_eval_storage, arg.skip_prdc, final_step=True)
     update_best_score(eval_score, arg.n_iter, syn_data_file, arg.dataset, best_result)
 
     n_val_samples = arg.fid_dataset_size

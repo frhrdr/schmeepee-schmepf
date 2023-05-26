@@ -179,7 +179,7 @@ def delayed_log(level, message):
 
 def log_synth_data_eval(net_gen, writer, step, noise_maker, device, dataset, synth_dataset_size,
                         batch_size, log_dir, n_classes, fid_dataset_size, image_size,
-                        center_crop_size, data_scale, local_fid_eval_storage, final_step):
+                        center_crop_size, data_scale, local_fid_eval_storage, skip_prdc, final_step):
   return_score = None
 
   if final_step:
@@ -225,18 +225,22 @@ def log_synth_data_eval(net_gen, writer, step, noise_maker, device, dataset, syn
     pretrained = True
     # running MNIST with pretrained=False should be possible.
     # the only problem right now is that vgg16 requires input HW of 32 at minimum and MNIST has 28
-
-    LOG.info('prdc eval')
-    prdc_batch_size = 100
-    prdc_n_samples = 10_000
-    prdc_dict = get_prdc(syn_data_file, prdc_batch_size, prdc_n_samples, dataset,
-                         image_size, center_crop_size, data_scale,
-                         nearest_k=5, skip_pr=False, pretrained=pretrained, device=device)
-    score_ser['precision'] = prdc_dict['precision']
-    score_ser['recall'] = prdc_dict['recall']
-    score_ser['density'] = prdc_dict['density']
-    score_ser['coverage'] = prdc_dict['coverage']
-
+    if not skip_prdc:
+      LOG.info('prdc eval')
+      prdc_batch_size = 100
+      prdc_n_samples = 10_000
+      prdc_dict = get_prdc(syn_data_file, prdc_batch_size, prdc_n_samples, dataset,
+                           image_size, center_crop_size, data_scale,
+                           nearest_k=5, skip_pr=False, pretrained=pretrained, device=device)
+      score_ser['precision'] = prdc_dict['precision']
+      score_ser['recall'] = prdc_dict['recall']
+      score_ser['density'] = prdc_dict['density']
+      score_ser['coverage'] = prdc_dict['coverage']
+    else:
+      score_ser['precision'] = 0.
+      score_ser['recall'] = 0.
+      score_ser['density'] = 0.
+      score_ser['coverage'] = 0.
   if n_classes is not None:
     LOG.info(f'classifier eval')
     if dataset == 'cifar10':
