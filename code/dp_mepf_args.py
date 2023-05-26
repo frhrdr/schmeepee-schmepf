@@ -83,6 +83,8 @@ def get_args():
   parser.add_argument('--load_generator', type=str, default='if_exists',
                       choices=['False', 'True', 'if_exists'],
                       help='whether to load a generator (i.e. continue run)')
+  parser.add_argument('--local_fid_eval_storage', type=str, default='/tmp/',
+                      help='if not none, store syn data on local machine first for quicker access')
 
   # FID SCORE AND SYNTH DATA
   parser.add_argument('--synth_dataset_size', type=int, default=None,

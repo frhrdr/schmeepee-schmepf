@@ -1,5 +1,6 @@
 import os
 import sys
+import shutil
 from dataclasses import dataclass
 import colorlog
 import torch as pt
@@ -178,7 +179,7 @@ def delayed_log(level, message):
 
 def log_synth_data_eval(net_gen, writer, step, noise_maker, device, dataset, synth_dataset_size,
                         batch_size, log_dir, n_classes, fid_dataset_size, image_size,
-                        center_crop_size, data_scale, final_step):
+                        center_crop_size, data_scale, local_fid_eval_storage, final_step):
   return_score = None
 
   if final_step:
@@ -190,10 +191,18 @@ def log_synth_data_eval(net_gen, writer, step, noise_maker, device, dataset, syn
     fid_file_name = f'fid_it{step}'
     acc_file_name = f'accuracies_it{step}'
 
+  # for quicker run on cluster, save syn data locally during fid eval
+  if local_fid_eval_storage is not None and os.path.exists(local_fid_eval_storage):
+    syn_data_save_dir = local_fid_eval_storage
+    run_fid_locally = True
+  else:
+    syn_data_save_dir = log_dir
+    run_fid_locally = False
+
   LOG.info(f'generating synthetic dataset')
   # syn_data_file_name = f'synth_data_it{step + 1}'
   syn_data_file = create_synth_dataset(synth_dataset_size, net_gen, batch_size,
-                                       noise_maker, device, save_dir=log_dir,
+                                       noise_maker, device, save_dir=syn_data_save_dir,
                                        file_name=syn_data_file_name, n_classes=n_classes)
 
   score_ser = pd.Series({}, name=step)
@@ -256,6 +265,11 @@ def log_synth_data_eval(net_gen, writer, step, noise_maker, device, dataset, syn
   else:
     score_df = pd.DataFrame(score_ser)
   score_df.to_csv(score_csv_path)
+
+  # after the evaluation, copy over synthetic data file to central storage
+  if run_fid_locally:
+    shutil.copy(syn_data_file, log_dir)
+    syn_data_file = os.path.join(log_dir, syn_data_file.split('/')[-1])
 
   return syn_data_file, return_score
 

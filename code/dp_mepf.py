@@ -326,7 +326,8 @@ def main():
                                                       arg.batch_size, arg.log_dir,
                                                       n_classes, arg.fid_dataset_size,
                                                       arg.image_size, arg.center_crop_size,
-                                                      arg.data_scale, final_step=False)
+                                                      arg.data_scale, arg.local_fid_eval_storage,
+                                                      final_step=False)
 
       update_best_score(eval_score, step, syn_data_file, arg.dataset, best_result)
       update_best_proxy_score(static_val_loss, step, syn_data_file, best_proxy_result)
@@ -353,7 +354,7 @@ def main():
                                                     arg.batch_size, arg.log_dir, n_classes,
                                                     arg.fid_dataset_size, arg.image_size,
                                                     arg.center_crop_size, arg.data_scale,
-                                                    final_step=True)
+                                                    arg.local_fid_eval_storage, final_step=True)
     update_best_score(eval_score, arg.n_iter, syn_data_file, arg.dataset, best_result)
 
     n_val_samples = arg.fid_dataset_size
