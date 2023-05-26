@@ -6,7 +6,7 @@ import torchvision.datasets as dset
 from pytorch_fid.fid_score import calculate_frechet_distance
 from pytorch_fid.inception import InceptionV3
 from tqdm import tqdm
-from data_loading import load_synth_dataset, load_dataset, load_imagenet_32, IMAGENET_MEAN, IMAGENET_SDEV
+from data_loading import load_synth_dataset, load_dataset, load_imagenet_numpy, IMAGENET_MEAN, IMAGENET_SDEV
 
 def cifar10_stats(model, device, batch_size, workers, image_size=32, dataroot='../data'):
   transformations = [transforms.Resize(image_size), transforms.ToTensor(),
@@ -31,7 +31,7 @@ def store_imagenet32_stats():
   model = InceptionV3([block_idx]).to(device)
   # mu_real, sig_real = cifar10_stats(model, device, batch_size, workers,
   #                                   image_size=32, dataroot='../data')
-  dataloader = load_imagenet_32('../data', batch_size=50, workers=1)
+  dataloader = load_imagenet_numpy('../data', batch_size=50, workers=1, img_hw=32)
   mu_real, sig_real = stats_from_dataloader(dataloader, model, device)
   np.savez(real_data_stats_file, mu=mu_real, sig=sig_real)
 
@@ -62,7 +62,7 @@ def embedding_file(dataset_name, image_size, data_scale):
   return f'{dataset_name}_{image_size}{scale_str}.npz'
 
 
-def get_fid_scores(synth_data_file, dataset_name, device, n_samples,
+def get_fid_scores_err(synth_data_file, dataset_name, device, n_samples,
                    image_size, center_crop_size, data_scale,
                    base_data_dir='../data', batch_size=50):
   real_data_stats_dir = os.path.join(base_data_dir, 'fid_stats')

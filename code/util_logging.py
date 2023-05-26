@@ -9,7 +9,7 @@ from torchvision import utils as vutils
 from torchvision import datasets
 from filelock import FileLock
 from eval_accuracy import synth_to_real_test
-from eval_fid import get_fid_scores, get_fid_scores_fixed
+from eval_fid import get_fid_scores_fixed
 from eval_prdc import get_prdc
 from mnist_synth_data_benchmark import prep_models, model_test_run
 from data_loading import IMAGENET_MEAN, IMAGENET_SDEV

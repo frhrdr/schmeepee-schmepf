@@ -3,20 +3,17 @@ import random
 import torch as pt
 import torch.nn as nn
 import torch.optim as optim
-import torch.utils.data
-import torchvision.datasets as dset
-import torchvision.transforms as transforms
 import torchvision.utils as vutils
 import numpy as np
 import matplotlib.pyplot as plt
 import argparse
-from data_loading import load_imagenet_numpy, load_cifar10
-from eval_fid import get_fid_scores
-from models.resnets_groupnorm import ResnetGroupnormG, ResNetFlat
+from data_loading import load_imagenet_numpy, load_dataset, IMAGENET_MEAN, IMAGENET_SDEV
+from eval_fid import get_fid_scores_fixed
+from resnets_groupnorm import ResnetGroupnormG, ResNetFlat
 from dp_analysis import find_dpsgd_sigma
 # from dp_sgd_backpack import dp_sgd_backward
-from dp_sgd_backpack_gradacc import clip_grad_acc, pert_and_apply_grad
 from backpack import extend
+from dp_sgd_backpack_gradacc import clip_grad_acc, pert_and_apply_grad
 
 
 REAL_LABEL = 1.
@@ -33,12 +30,12 @@ def weights_init(m):
         nn.init.constant_(m.bias.data, 0)
 
 
-def get_resnets(nz, ngf, ndf, n_classes, device, img_hw):
+def get_resnets(nz, ngf, ndf, device, img_hw, gen_output):
   # net_d = get_resnet9_discriminator(ndf, affine_gn=False, use_sigmoid=False).to(device)
-  net_d = ResNetFlat(planes=ndf, n_classes=n_classes, use_sigmoid=False,
+  net_d = ResNetFlat(planes=ndf, use_sigmoid=False,
                      image_size=img_hw).to(device)
   net_g = ResnetGroupnormG(nz, 3, ngf, img_hw, adapt_filter_size=True,
-                           use_conv_at_skip_conn=False, gen_output='linear',
+                           use_conv_at_skip_conn=False, gen_output=gen_output,
                            affine_gn=False).to(device)
   return net_d, net_g
 
@@ -118,43 +115,6 @@ class Discriminator(nn.Module):
     return self.main(x)
 
 
-# def load_cifar10(dataroot, batch_size,
-#                  n_workers, test_set=False):
-#   transformations = [transforms.ToTensor(),
-#                      transforms.Normalize(mean=[0.5, 0.5, 0.5], std=[0.5, 0.5, 0.5])]
-#   dataset = dset.CIFAR10(root=dataroot, train=not test_set, download=True,
-#                          transform=transforms.Compose(transformations))
-#
-#   dataloader = pt.utils.data.DataLoader(dataset, batch_size=batch_size,
-#                                         shuffle=True, num_workers=int(n_workers))
-#
-#   return dataloader
-
-
-def load_celeba(dataroot, batch_size, n_workers, image_size=32, center_crop_size=32):
-
-  transformations = []
-  if center_crop_size > image_size:
-    transformations.extend([transforms.CenterCrop(center_crop_size),
-                            transforms.Resize(image_size)])
-  else:
-    transformations.extend([transforms.Resize(image_size),
-                            transforms.CenterCrop(center_crop_size)])
-
-  transformations.extend([transforms.ToTensor(),
-                          transforms.Normalize(mean=[0.485, 0.456, 0.406],
-                                               std=[0.229, 0.224, 0.225])])
-
-  # folder dataset
-  dataset = dset.ImageFolder(root=os.path.join(dataroot, 'img_align_celeba'),
-                             transform=transforms.Compose(transformations))
-
-  dataloader = pt.utils.data.DataLoader(dataset, batch_size=batch_size,
-                                        shuffle=True, num_workers=int(n_workers))
-
-  return dataloader
-
-
 def expand_vector(vec, tgt_tensor):
   tgt_shape = [vec.shape[0]] + [1] * (len(tgt_tensor.shape) - 1)
   return vec.view(*tgt_shape)
@@ -209,8 +169,8 @@ def create_fid_dataset(net_gen, nz, device, save_dir='.', file_name='synth_data'
   return file_path
 
 
-def nondp_unlabeled_update(net_d, net_g, optimizer_d, optimizer_g, real_batch, criterion, label,
-                           arg, b_size, device, global_step):
+def nondp_update(net_d, net_g, optimizer_d, optimizer_g, real_batch, criterion, label,
+                 arg, b_size, device, global_step):
   real_pred = net_d(real_batch).view(-1)
   err_d_real = criterion(real_pred, label)
   err_d_real.backward()
@@ -243,9 +203,8 @@ def nondp_unlabeled_update(net_d, net_g, optimizer_d, optimizer_g, real_batch, c
   return real_pred_acc, fake_pred_acc, err_d_item, err_g
 
 
-def dp_unlabeled_update(net_d, net_g, optimizer_d, optimizer_g, real_batch, criterion, disc_loss,
-                        label, arg, b_size, device, global_step,
-                        noise_factor):
+def dp_update(net_d, net_g, optimizer_d, optimizer_g, real_batch, criterion, disc_loss,
+              label, arg, b_size, device, global_step, noise_factor):
   grad_d_real, err_d_real, _, _ = clip_grad_acc(net_d.parameters(), real_batch, label,
                                                 disc_loss, arg.batch_size_grad_acc,
                                                 arg.clip_norm)
@@ -275,85 +234,8 @@ def dp_unlabeled_update(net_d, net_g, optimizer_d, optimizer_g, real_batch, crit
     optimizer_g.step()
 
 
-def get_gen_noise(b_size, nz, device, n_classes=None, labels=None):
-  if n_classes is None:
-    return pt.randn(b_size, nz, 1, 1, device=device)
-  else:
-    gen_noise = pt.randn(b_size, nz - n_classes, 1, 1, device=device)
-    if labels is None:
-      labels = pt.eye(n_classes, device=device)[pt.randint(n_classes, (b_size,))]
-    labeled_noise = pt.cat((labels[:, :, None, None], gen_noise), dim=1)
-    return labeled_noise, labels
-
-
-def nondp_labeled_update(net_d, net_g, optimizer_d, optimizer_g, real_batch, criterion, label,
-                         arg, b_size, device, global_step, real_labels, n_classes):
-  # print(real_labels.shape)
-  real_labels_onehot = pt.eye(n_classes, device=device)[real_labels]
-  real_pred = net_d(real_batch, real_labels_onehot).view(-1)
-  err_d_real = criterion(real_pred, label)
-  err_d_real.backward()
-  real_pred_acc = pt.sigmoid(real_pred).mean().item()
-
-  labeled_noise, rand_labels = get_gen_noise(b_size, arg.nz, device, n_classes)
-  fake = net_g(labeled_noise)
-  label.fill_(FAKE_LABEL)
-  fake_pred = net_d(fake.detach(), rand_labels).view(-1)
-  err_d_fake = criterion(fake_pred, label)
-  err_d_fake.backward()
-  fake_pred_acc = pt.sigmoid(fake_pred).mean().item()
-
-  err_d = err_d_real + err_d_fake
-  err_d_item = err_d.item()
-  optimizer_d.step()
-
-  ############################
-  # (2) Update G network: maximize log(D(G(z)))
-  ###########################
-  if global_step % arg.train_gen_every_n_steps == 0:
-    net_g.zero_grad()
-    label.fill_(REAL_LABEL)  # fake labels are real for generator cost
-    fake_pred = net_d(fake, rand_labels).view(-1)
-    err_g = criterion(fake_pred, label)
-    err_g.backward()
-    optimizer_g.step()
-  else:
-    err_g = None
-  return real_pred_acc, fake_pred_acc, err_d_item, err_g
-
-
-def dp_labeled_update(net_d, net_g, optimizer_d, optimizer_g, real_batch, criterion, disc_loss,
-                      label, arg, b_size, device, global_step, noise_factor, real_labels,
-                      n_classes):
-  real_labels_onehot = pt.eye(n_classes, device=device)[real_labels]
-  grad_d_real, err_d_real, _, _ = clip_grad_acc(net_d.parameters(), real_batch, real_labels_onehot,
-                                                lambda x, t: disc_loss(x, t, label[:x.shape[0]]),
-                                                arg.batch_size_grad_acc, arg.clip_norm)
-  labeled_noise, rand_labels = get_gen_noise(b_size, arg.nz, device, n_classes)
-  fake = net_g(labeled_noise)
-  label.fill_(FAKE_LABEL)
-  grad_d_fake, err_d_fake, _, _ = clip_grad_acc(net_d.parameters(), fake.detach(), rand_labels,
-                                                lambda x, t: disc_loss(x, t, label[:x.shape[0]]),
-                                                arg.batch_size_grad_acc, arg.clip_norm)
-  pert_and_apply_grad(net_d.parameters(), grad_d_real, noise_factor, arg.clip_norm, device,
-                      replace_grad=True)
-  pert_and_apply_grad(net_d.parameters(), grad_d_fake, 0., arg.clip_norm, device,
-                      replace_grad=False)
-  err_d_item = 0
-  optimizer_d.step()
-
-  ############################
-  # (2) Update G network: maximize log(D(G(z)))
-  ###########################
-  if global_step % arg.train_gen_every_n_steps == 0:
-    net_d.zero_grad()
-    net_g.zero_grad()
-    label.fill_(REAL_LABEL)  # fake labels are real for generator cost
-    # fake = net_g(pt.randn(b_size, arg.nz, 1, 1, device=device))
-    fake_pred = net_d(fake, rand_labels).view(-1)
-    err_g = criterion(fake_pred, label)
-    err_g.backward()
-    optimizer_g.step()
+def get_gen_noise(b_size, nz, device):
+  return pt.randn(b_size, nz, 1, 1, device=device)
 
 
 def main():
@@ -388,7 +270,8 @@ def main():
   parser.add_argument('--pretrain_exp', type=str, default=None)
   parser.add_argument('--single_iter', action='store_true')
   parser.add_argument('--local_data', action='store_true')
-  parser.add_argument('--labeled', action='store_true')
+
+  parser.add_argument('--gen_output', type=str, default='tanh', choices=['linear', 'tanh'])
 
   arg = parser.parse_args()
 
@@ -398,9 +281,6 @@ def main():
   print("Random Seed: ", arg.seed)
   random.seed(arg.seed)
   pt.manual_seed(arg.seed)
-  if arg.labeled:
-    assert arg.model == 'resnet'
-    assert arg.data in {'cifar10', 'imagenet32'}
 
   if arg.target_eps is not None:
     n_samples_dict = {'cifar10': 50_000, 'imagenet32': 1_281_167, 'celeba': 202_599,
@@ -415,26 +295,24 @@ def main():
 
   data_root = '/tmp' if arg.local_data else '../data'
   img_hw = 32
+  data_scale = 'normed' if arg.gen_output == 'linear' else '0_1'
   if arg.data == 'cifar10':
-    # dataloader = load_cifar10('../data', arg.batch_size, arg.workers)
-    dataloader, _ = load_cifar10(32, data_root, arg.batch_size, arg.workers, 'normed', True, False)
-    n_classes = 10 if arg.labeled else None
+    # dataloader, _ = load_cifar10(32, data_root, arg.batch_size, arg.workers, 'normed', True, False)
+    dataloader, _ = load_dataset('cifar10', img_hw, img_hw, data_root, arg.batch_size, arg.workers,
+                                 data_scale, False, False)
   elif arg.data == 'celeba':
-    dataloader = load_celeba(data_root, arg.batch_size, arg.workers)
-    n_classes = None
+    dataloader, _ = load_dataset('celeba', img_hw, img_hw, data_root, arg.batch_size, arg.workers,
+                                 data_scale, False, False)
   elif arg.data == 'celeba64':
-    dataloader = load_celeba(data_root, arg.batch_size, arg.workers,
-                             image_size=64, center_crop_size=64)
-    n_classes = None
     img_hw = 64
+    dataloader, _ = load_dataset('celeba', img_hw, img_hw, data_root, arg.batch_size, arg.workers,
+                                 data_scale, False, False)
     arg.data = 'celeba'
   elif arg.data == 'imagenet64':
-    dataloader = load_imagenet_numpy(data_root, arg.batch_size, arg.workers, img_hw=64)
-    n_classes = 1000 if arg.labeled else None
     img_hw = 64
+    dataloader = load_imagenet_numpy(data_root, arg.batch_size, arg.workers, img_hw=img_hw)
   elif arg.data == 'imagenet32':
     dataloader = load_imagenet_numpy(data_root, arg.batch_size, arg.workers, img_hw=32)
-    n_classes = 1000 if arg.labeled else None
   else:
     raise ValueError
 
@@ -442,7 +320,7 @@ def main():
 
   if arg.model == 'resnet':
 
-    net_d, net_g = get_resnets(arg.nz, arg.ngf, arg.ndf, n_classes, device, img_hw)
+    net_d, net_g = get_resnets(arg.nz, arg.ngf, arg.ndf, device, img_hw, arg.gen_output)
   else:
     assert img_hw == 32
     net_d, net_g = get_convnets(arg, device)
@@ -455,12 +333,9 @@ def main():
     del pretrained_weights
 
   criterion = nn.BCEWithLogitsLoss()
-  if arg.labeled:
-    def disc_loss(x, t, y):
-      return criterion(net_d(x, t).view(-1), y)
-  else:
-    def disc_loss(x, y):
-      return criterion(net_d(x).view(-1), y)
+
+  def disc_loss(x, y):
+    return criterion(net_d(x).view(-1), y)
 
   # Create batch of latent vectors that we will use to visualize
   #  the progression of the generator
@@ -504,29 +379,17 @@ def main():
       b_size = real_batch.size(0)
       net_d.zero_grad()
       disc_label = pt.full((b_size,), REAL_LABEL, dtype=pt.float, device=device)
-      if not arg.labeled:
-        if arg.clip_norm is None:
-          res = nondp_unlabeled_update(net_d, net_g, optimizer_d, optimizer_g, real_batch, criterion,
-                                       disc_label, arg, b_size, device,
-                                       global_step)
-          real_pred_acc, fake_pred_acc, err_d_item, err_g = res
-        else:  # PRIVATE SETTING
-          dp_unlabeled_update(net_d, net_g, optimizer_d, optimizer_g, real_batch, criterion,
-                              disc_loss, disc_label, arg, b_size, device,
-                              global_step, noise_factor)
-          err_d_item = 0
-      else:
-        real_labels = data[1].to(device)
-        if arg.clip_norm is None:
-          res = nondp_labeled_update(net_d, net_g, optimizer_d, optimizer_g, real_batch, criterion,
-                                     disc_label, arg, b_size, device,
-                                     global_step, real_labels, n_classes)
-          real_pred_acc, fake_pred_acc, err_d_item, err_g = res
-        else:  # PRIVATE SETTING
-          dp_labeled_update(net_d, net_g, optimizer_d, optimizer_g, real_batch, criterion,
-                            disc_loss, disc_label, arg, b_size, device,
-                            global_step, noise_factor, real_labels, n_classes)
-          err_d_item = 0
+
+      if arg.clip_norm is None:
+        res = nondp_update(net_d, net_g, optimizer_d, optimizer_g, real_batch, criterion,
+                           disc_label, arg, b_size, device,
+                           global_step)
+        real_pred_acc, fake_pred_acc, err_d_item, err_g = res
+      else:  # PRIVATE SETTING
+        dp_update(net_d, net_g, optimizer_d, optimizer_g, real_batch, criterion,
+                  disc_loss, disc_label, arg, b_size, device,
+                  global_step, noise_factor)
+        err_d_item = 0
 
       err_g_item = 0 if err_g is None else err_g.item()
       # Output training stats
@@ -559,20 +422,19 @@ def main():
     if arg.single_iter:
       break
 
-  if arg.labeled:
-    assert n_classes == 10
-    plot_labels = pt.eye(10, device=device)[pt.repeat_interleave(pt.arange(0, 10), 10)]
-    labeled_noise, rand_labels = get_gen_noise(100, arg.nz, device, 10, plot_labels)
-    fake = net_g(labeled_noise).detach().cpu()
-  else:
-    fake = net_g(get_gen_noise(100, arg.nz, device)).detach().cpu()
+  fake = net_g(get_gen_noise(100, arg.nz, device)).detach().cpu()
   if arg.data in {'cifar10', 'celeba'}:
-    mean_tsr = pt.tensor([0.485, 0.456, 0.406], device=fake.device)
-    sdev_tsr = pt.tensor([0.229, 0.224, 0.225], device=fake.device)
+    if data_scale == 'normed':
+      mean_tsr = pt.tensor(IMAGENET_MEAN, device=fake.device)
+      sdev_tsr = pt.tensor(IMAGENET_SDEV, device=fake.device)
+      data_to_print = fake * sdev_tsr[None, :, None, None] + mean_tsr[None, :, None, None]
+    else:
+      data_to_print = fake
   else:
     mean_tsr = pt.tensor([0.5, 0.5, 0.5], device=fake.device)
     sdev_tsr = pt.tensor([0.5, 0.5, 0.5], device=fake.device)
-  data_to_print = fake * sdev_tsr[None, :, None, None] + mean_tsr[None, :, None, None]
+    data_to_print = fake * sdev_tsr[None, :, None, None] + mean_tsr[None, :, None, None]
+
   data_to_print = pt.clamp(data_to_print, min=0., max=1.)
   img_path_clamp = os.path.join(save_dir, 'clamped_plot.png')
   vutils.save_image(data_to_print, img_path_clamp, normalize=True, nrow=10)
@@ -581,8 +443,8 @@ def main():
   pt.save({'fake': fake}, os.path.join(save_dir, 'fake_final.pt'))
   pt.save({'d': net_d.state_dict(), 'g': net_g.state_dict()}, os.path.join(save_dir, 'ck.pt'))
   syn_data_path = create_fid_dataset(net_g, arg.nz, device, save_dir, file_name='synth_data')
-  fid = get_fid_scores(syn_data_path, dataset_name=arg.data, device=device, n_samples=50_000,
-                       image_size=img_hw, center_crop_size=img_hw, data_scale='normed', batch_size=100)
+  fid = get_fid_scores_fixed(syn_data_path, dataset_name=arg.data, device=device, n_samples=50_000,
+                       image_size=img_hw, center_crop_size=img_hw, data_scale=data_scale, batch_size=100)
   print(f'fid={fid}')
   np.save(os.path.join(save_dir, 'fid.npy'), fid)
   os.remove(syn_data_path)

@@ -286,40 +286,118 @@ def small_data_loader(dataset_name, is_train):
     raise ValueError
 
 
-class Imagenet32Dataset(pt.utils.data.Dataset):
-  def __init__(self, data_root, transform=None, test_set=False):
+# class Imagenet32Dataset(pt.utils.data.Dataset):
+#   def __init__(self, data_root, transform=None, test_set=False):
+#     assert not test_set
+#     self.data_subdir = os.path.join(data_root, f'Imagenet32_{"val" if test_set else "train"}_npz')
+#     self.default_batch_len = 128116
+#     self.last_batch_len = 128123
+#     self.n_feats = 3072
+#     self.mm_offset = 128
+#     self.memmaps = []
+#     self.mean = np.load(os.path.join(self.data_subdir, 'train_data_means.npy')).reshape((3, 32, 32))
+#     self.transform = transform
+#     for data_batch_id in range(10):
+#       len_batch = self.default_batch_len if data_batch_id < 9 else self.last_batch_len
+#
+#       x_map = np.memmap(os.path.join(self.data_subdir, f'train_data_batch_{data_batch_id}_x.npy'),
+#                         dtype=np.uint8, mode='r', shape=(len_batch, 3, 32, 32),
+#                         offset=self.mm_offset)
+#       y_map = np.memmap(os.path.join(self.data_subdir, f'train_data_batch_{data_batch_id}_y.npy'),
+#                         dtype=np.uint8, mode='r', shape=(len_batch,),
+#                         offset=self.mm_offset)
+#       self.memmaps.append((x_map, y_map))
+#
+#   @staticmethod
+#   def npz_to_npy_batches():
+#     for data_id in range(1, 11):
+#       data = np.load(f'../data/Imagenet32_train_npz/train_data_batch_{data_id}.npz')
+#       np.save(f'../data/Imagenet32_train_npz/train_data_batch_{data_id-1}_x.npy', data['data'])
+#       np.save(f'../data/Imagenet32_train_npz/train_data_batch_{data_id-1}_y.npy', data['labels']-1)
+#       if data_id == 1:
+#         np.save(f'../data/Imagenet32_train_npz/train_data_means.npy', data['mean'])
+#
+#     data = np.load(f'../data/Imagenet32_val_npz/val_data.npz')
+#     np.save(f'../data/Imagenet32_val_npz/val_data_x.npy', data['data'])
+#     np.save(f'../data/Imagenet32_val_npz/val_data_y.npy', data['labels'] - 1)
+#
+#   def __len__(self):
+#     return self.default_batch_len * 9 + self.last_batch_len
+#
+#   def __getitem__(self, idx):
+#     batch_id = idx // self.default_batch_len
+#     sample_id = idx % self.default_batch_len
+#     if batch_id == 10:
+#       batch_id = 9
+#       sample_id += self.default_batch_len
+#     x_map, y_map = self.memmaps[batch_id]
+#     x, y = x_map[sample_id].copy(), y_map[sample_id].copy()
+#     x = pt.tensor(x, dtype=pt.float) / 255
+#     if self.transform:
+#       x = self.transform(x)
+#     return x, y
+#
+#
+# def load_imagenet_32(data_root, batch_size, workers, test_set=False):
+#   transform = transforms.Compose([transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5))])
+#   # transform = None
+#   dataset = Imagenet32Dataset(data_root, transform, test_set)
+#   # Create the dataloader
+#   dataloader = pt.utils.data.DataLoader(dataset, batch_size=batch_size,
+#                                         shuffle=True, num_workers=workers)
+#   return dataloader
+
+
+class ImagenetNumpyDataset(pt.utils.data.Dataset):
+  def __init__(self, data_root, transform=None, test_set=False, img_hw=32, load_to_memory=True):
     assert not test_set
-    self.data_subdir = os.path.join(data_root, f'Imagenet32_{"val" if test_set else "train"}_npz')
+    self.data_subdir = os.path.join(data_root, f'Imagenet{img_hw}_{"val" if test_set else "train"}_npz')
     self.default_batch_len = 128116
     self.last_batch_len = 128123
-    self.n_feats = 3072
+    self.n_feats = img_hw ** 2 * 3  # 3072 for 32, 12288 for 64
     self.mm_offset = 128
     self.memmaps = []
-    self.mean = np.load(os.path.join(self.data_subdir, 'train_data_means.npy')).reshape((3, 32, 32))
+    self.load_to_memory = load_to_memory
+    self.x_data = []
+    self.y_data = []
+    self.mean = np.load(os.path.join(self.data_subdir, 'train_data_means.npy')).reshape((3, img_hw, img_hw))
     self.transform = transform
-    for data_batch_id in range(10):
-      len_batch = self.default_batch_len if data_batch_id < 9 else self.last_batch_len
+    if self.load_to_memory:
+      for data_batch_id in range(10):
+        x_batch = np.load(os.path.join(self.data_subdir, f'train_data_batch_{data_batch_id}_x.npy'))
+        y_batch = np.load(os.path.join(self.data_subdir, f'train_data_batch_{data_batch_id}_y.npy'))
+        # x_batch = x_batch.astype(np.float32) / 255.  # way too memory intensive (8 vs 32 bit)
+        x_batch = np.reshape(x_batch, (-1, 3, img_hw, img_hw))
+        self.x_data.append(x_batch)
+        self.y_data.append(y_batch)
+      print('successfully loaded data to memory')
+    else:
+      for data_batch_id in range(10):
+        len_batch = self.default_batch_len if data_batch_id < 9 else self.last_batch_len
 
-      x_map = np.memmap(os.path.join(self.data_subdir, f'train_data_batch_{data_batch_id}_x.npy'),
-                        dtype=np.uint8, mode='r', shape=(len_batch, 3, 32, 32),
-                        offset=self.mm_offset)
-      y_map = np.memmap(os.path.join(self.data_subdir, f'train_data_batch_{data_batch_id}_y.npy'),
-                        dtype=np.uint8, mode='r', shape=(len_batch,),
-                        offset=self.mm_offset)
-      self.memmaps.append((x_map, y_map))
+        x_map = np.memmap(os.path.join(self.data_subdir, f'train_data_batch_{data_batch_id}_x.npy'),
+                          dtype=np.uint8, mode='r', shape=(len_batch, 3, 32, 32),
+                          offset=self.mm_offset)
+        y_map = np.memmap(os.path.join(self.data_subdir, f'train_data_batch_{data_batch_id}_y.npy'),
+                          dtype=np.uint8, mode='r', shape=(len_batch,),
+                          offset=self.mm_offset)
+        self.memmaps.append((x_map, y_map))
 
   @staticmethod
-  def npz_to_npy_batches():
+  def npz_to_npy_batches(train_data_root='../data/Imagenet32_train_npz/',
+                         val_data_root='../data/Imagenet32_val_npz/'):
     for data_id in range(1, 11):
-      data = np.load(f'../data/Imagenet32_train_npz/train_data_batch_{data_id}.npz')
-      np.save(f'../data/Imagenet32_train_npz/train_data_batch_{data_id-1}_x.npy', data['data'])
-      np.save(f'../data/Imagenet32_train_npz/train_data_batch_{data_id-1}_y.npy', data['labels']-1)
+      data = np.load(os.path.join(train_data_root, f'train_data_batch_{data_id}.npz'))
+      np.save(os.path.join(train_data_root, f'train_data_batch_{data_id - 1}_x.npy'), data['data'])
+      np.save(os.path.join(train_data_root, f'train_data_batch_{data_id - 1}_y.npy'),
+                           data['labels'] - 1)
       if data_id == 1:
-        np.save(f'../data/Imagenet32_train_npz/train_data_means.npy', data['mean'])
+        np.save(os.path.join(train_data_root, 'train_data_means.npy'), data['mean'])
 
-    data = np.load(f'../data/Imagenet32_val_npz/val_data.npz')
-    np.save(f'../data/Imagenet32_val_npz/val_data_x.npy', data['data'])
-    np.save(f'../data/Imagenet32_val_npz/val_data_y.npy', data['labels'] - 1)
+    if val_data_root is not None and os.path.exists(val_data_root):
+      data = np.load(os.path.join(val_data_root, f'val_data.npz'))
+      np.save(os.path.join(val_data_root, f'val_data_x.npy'), data['data'])
+      np.save(os.path.join(val_data_root, f'val_data_y.npy'), data['labels'] - 1)
 
   def __len__(self):
     return self.default_batch_len * 9 + self.last_batch_len
@@ -330,18 +408,22 @@ class Imagenet32Dataset(pt.utils.data.Dataset):
     if batch_id == 10:
       batch_id = 9
       sample_id += self.default_batch_len
-    x_map, y_map = self.memmaps[batch_id]
-    x, y = x_map[sample_id].copy(), y_map[sample_id].copy()
-    x = pt.tensor(x, dtype=pt.float) / 255
+    if self.load_to_memory:
+      x = pt.tensor(self.x_data[batch_id][sample_id].astype(np.float32) / 255.)
+      y = self.y_data[batch_id][sample_id]
+    else:
+      x_map, y_map = self.memmaps[batch_id]
+      x, y = x_map[sample_id].copy(), y_map[sample_id].copy()
+      x = pt.tensor(x, dtype=pt.float) / 255
     if self.transform:
       x = self.transform(x)
     return x, y
 
 
-def load_imagenet_32(data_root, batch_size, workers, test_set=False):
+def load_imagenet_numpy(data_root, batch_size, workers, test_set=False, img_hw=32):
   transform = transforms.Compose([transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5))])
   # transform = None
-  dataset = Imagenet32Dataset(data_root, transform, test_set)
+  dataset = ImagenetNumpyDataset(data_root, transform, test_set, img_hw=img_hw)
   # Create the dataloader
   dataloader = pt.utils.data.DataLoader(dataset, batch_size=batch_size,
                                         shuffle=True, num_workers=workers)
