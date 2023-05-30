@@ -74,7 +74,7 @@ def experiment_table(log_dir):
 
 
 def remove_matching_args(exp_table):
-  first_row = exp_table.loc[0, 'args']
+  first_row = exp_table.loc[exp_table.index[0], 'args']
   matches = exp_table.loc[:, 'args'].eq(first_row, axis='columns')
   nan_cols = exp_table.loc[:, 'args'].isnull().all(axis='index')
   matches = matches.all(axis='index')
