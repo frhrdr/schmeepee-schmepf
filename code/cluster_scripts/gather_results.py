@@ -188,7 +188,7 @@ def create_exp_tables(arg, log_dir):
   avgn = arg.average_groups_of_n
   if avgn is not None:
     assert len(exp_table.index) % avgn == 0  # num ber of runs is a multiple of avgn
-    assert all([int(k) == j for j, k in enumerate(exp_table.index)])  # all indices are present
+    assert all([int(k) + arg.run_idx_offset == j for j, k in enumerate(exp_table.index)])  # all indices are present
 
     reduced_exp_table_avg_n = average_n_indices(reduced_exp_table, avgn)
     reduced_exp_table_avg_n.to_csv(os.path.join(log_dir, f'results_run_args_avg_{avgn}.csv'))
@@ -237,6 +237,9 @@ def main():
   parser.add_argument('--view_true', type=str, nargs='*', default=[])
   parser.add_argument('--view_false', type=str, nargs='*', default=[])
   parser.add_argument('--view_val', type=str, nargs='*', default=[])
+
+  parser.add_argument('--run_idx_offset', type=int, default=0)
+
 
   parser.add_argument('--pre_proxy', action='store_true', help='set if old log without proxy fid')
   parser.add_argument('--print_best_steps', '-s', action='store_true', help='print best iterations')
