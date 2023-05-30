@@ -188,7 +188,7 @@ def create_exp_tables(arg, log_dir):
   avgn = arg.average_groups_of_n
   if avgn is not None:
     assert len(exp_table.index) % avgn == 0  # num ber of runs is a multiple of avgn
-    assert all([int(k) + arg.run_idx_offset == j for j, k in enumerate(exp_table.index)])  # all indices are present
+    assert all([int(k) == j + arg.run_idx_offset for j, k in enumerate(exp_table.index)])  # all indices are present
 
     reduced_exp_table_avg_n = average_n_indices(reduced_exp_table, avgn)
     reduced_exp_table_avg_n.to_csv(os.path.join(log_dir, f'results_run_args_avg_{avgn}.csv'))
