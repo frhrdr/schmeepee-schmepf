@@ -44,7 +44,7 @@ def get_args():
 
   # ways to shortcut some data loading and eval
   parser.add_argument('--n_features_in_enc', type=int, default=None,
-                      choices=[None, 303104, 1212416],  # vgg19 at 32x32 and at 64x64 data
+                      choices=[None, 303104, 1212416, 3031040],  # vgg19 at 32x32 and at 64x64 and 32x32 at 10 labels
                       help='hardcode number of feats so it doesnt have to be computed using data')
   parser.add_argument('--n_classes', type=int, default=None,
                       choices=[None, 0, 10],
