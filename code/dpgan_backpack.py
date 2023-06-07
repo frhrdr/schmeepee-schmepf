@@ -386,8 +386,6 @@ def main():
     actual_eps, noise_factor = find_dpsgd_sigma(arg.target_eps, arg.target_delta, arg.batch_size,
                                                 n_samples, n_iter)
     print(f'using sigma={noise_factor} to achieve eps={actual_eps}')
-  else:
-    noise_factor = None
 
   data_root = '/tmp' if arg.local_data else '../data'
   img_hw = 32
