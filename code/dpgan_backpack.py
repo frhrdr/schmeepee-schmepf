@@ -465,6 +465,7 @@ def main():
   err_g = None
   real_pred_acc, fake_pred_acc = None, None
   for epoch in range(start_epoch, arg.n_epochs):
+    print(f'starting epoch {epoch}')
     for i, data in enumerate(dataloader, 0):
       global_step += 1
       ############################
@@ -490,7 +491,7 @@ def main():
 
       err_g_item = 0 if err_g is None else err_g.item()
       # Output training stats
-      if i % 100 == 0:
+      if i % 1000 == 0:
         if real_pred_acc is not None:
           print(f'real_pred_acc {real_pred_acc}, fake pred acc {fake_pred_acc}')
         else:
