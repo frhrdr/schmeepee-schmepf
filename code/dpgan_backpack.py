@@ -27,7 +27,7 @@ def get_args():
   parser.add_argument('--seed', type=int, default=999)
   parser.add_argument('--data', type=str, default='cifar10',
                       choices=['cifar10', 'celeba', 'imagenet32', 'celeba64', 'imagenet64'])
-  parser.add_argument('--workers', type=int, default=2)
+  parser.add_argument('--workers', type=int, default=1)
   parser.add_argument('--batch_size', type=int, default=128)
   parser.add_argument('--batch_size_grad_acc', type=int, default=128)
   parser.add_argument('--nc', type=int, default=3)
@@ -420,6 +420,10 @@ def main():
     assert img_hw == 32
     net_d, net_g = get_convnets(arg, device)
   if net_g_state is not None and net_d_state is not None:
+    print('net g keys')
+    print(net_g_state.keys())
+    print('net d keys')
+    print(net_d_state.keys())
     net_g.load_state_dict(net_g_state)
     net_d.load_state_dict(net_d_state)
     del net_g_state
