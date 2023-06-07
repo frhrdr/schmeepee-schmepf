@@ -420,10 +420,6 @@ def main():
     assert img_hw == 32
     net_d, net_g = get_convnets(arg, device)
   if net_g_state is not None and net_d_state is not None:
-    print('net g keys')
-    print(net_g_state.keys())
-    print('net d keys')
-    print(net_d_state.keys())
     net_g.load_state_dict(net_g_state)
     net_d.load_state_dict(net_d_state)
     del net_g_state
@@ -454,8 +450,8 @@ def main():
   opt_g = optim.Adam(net_g.parameters(), lr=lr_gen, betas=(arg.beta1, 0.999))
 
   if opt_g_state is not None and opt_d_state is not None:
-    net_g.load_state_dict(opt_g_state)
-    net_d.load_state_dict(opt_d_state)
+    opt_g.load_state_dict(opt_g_state)
+    opt_d.load_state_dict(opt_d_state)
     del opt_g_state
     del opt_d_state
     print('loaded optimizer weights from checkpoint')
