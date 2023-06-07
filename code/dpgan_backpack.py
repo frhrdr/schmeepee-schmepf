@@ -160,11 +160,11 @@ def expand_vector(vec, tgt_tensor):
   return vec.view(*tgt_shape)
 
 
-def make_final_plots(dataloader, G_losses, D_losses, device, final_images, save_dir):
+def make_final_plots(dataloader, g_losses, d_losses, device, final_images, save_dir):
   plt.figure(figsize=(10, 5))
   plt.title("Generator and Discriminator Loss During Training")
-  plt.plot(G_losses, label="G")
-  plt.plot(D_losses, label="D")
+  plt.plot(g_losses, label="G")
+  plt.plot(d_losses, label="D")
   plt.xlabel("iterations")
   plt.ylabel("Loss")
   plt.legend()
@@ -261,7 +261,7 @@ def dp_update(net_d, net_g, optimizer_d, optimizer_g, real_batch, criterion, dis
                       replace_grad=True)
   pert_and_apply_grad(net_d.parameters(), grad_d_fake, 0., arg.clip_norm, device,
                       replace_grad=False)
-  err_d_item = 0
+
   optimizer_d.step()
 
   ############################
@@ -295,7 +295,6 @@ def create_checkpoint(log_dir, epoch, noise_scale, best_fid, best_epoch, best_sy
   ckpt['opt_d'] = opt_d.state_dict()
   ckpt['net_g'] = net_g.state_dict()
   ckpt['net_d'] = net_d.state_dict()
-
 
   pt.save(ckpt, os.path.join(log_dir, f'checkpoint.pt'))
   pt.save(ckpt, os.path.join(log_dir, f'checkpoint_ep{epoch}.pt'))
@@ -352,6 +351,7 @@ def update_best_score(fid, syn_data_path, epoch, best_fid, best_syn_data_path, b
     except FileNotFoundError:
       print(f'failed to delete syn data {syn_data_path}')
   return best_fid, best_syn_data_path, best_epoch
+
 
 def main():
   arg = get_args()
@@ -425,7 +425,7 @@ def main():
     del net_g_state
     del net_d_state
     print('loaded model weights from checkpoint')
-  elif arg.pretrain_exp is not None:
+  elif arg.pretrain_checkpoint is not None:
     weights_file = os.path.join('../logs/dcgan/', arg.pretrain_checkpoint)
     pretrained_weights = pt.load(weights_file)
     net_g.load_state_dict(pretrained_weights['net_g'])
@@ -529,16 +529,6 @@ def main():
 
     if arg.single_iter:
       exit(0)
-
-
-
-
-
-
-
-
-
-
 
 
 if __name__ == '__main__':
