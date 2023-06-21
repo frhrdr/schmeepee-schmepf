@@ -493,9 +493,9 @@ def main():
       # Output training stats
       if i % 1000 == 0:
         if real_pred_acc is not None:
-          print(f'real_pred_acc {real_pred_acc}, fake pred acc {fake_pred_acc}')
+          print(f'iter {i}: real_pred_acc {real_pred_acc:.3f}, fake pred acc {fake_pred_acc:.3f}')
         else:
-          print(f'err_d {err_d_item}, err_g {err_g_item}')
+          print(f'iter {i}: err_d {err_d_item:.3f}, err_g {err_g_item:.3f}')
 
       # Save Losses for plotting later
       g_losses.append(err_g_item)
