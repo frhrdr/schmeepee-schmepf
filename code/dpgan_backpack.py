@@ -513,8 +513,7 @@ def main():
         break
 
     if arg.single_iter or (epoch + 1) % arg.n_save_epochs == 0 or epoch + 1 == arg.n_epochs:
-      create_checkpoint(save_dir, epoch, noise_factor, best_fid, best_epoch, best_syn_data_path,
-                        opt_g, opt_d, net_g, net_d, global_step)
+
       # make an image
       fake = net_g(get_gen_noise(100, arg.nz, device)).detach().cpu()
       print_fake_batch(arg, fake, data_scale, save_dir, file_name=f'clamped_plot_ep{epoch}.png')
@@ -528,6 +527,9 @@ def main():
 
       best_fid, best_syn_data_path, best_epoch = update_best_score(fid, syn_data_path, epoch, best_fid,
                                                                    best_syn_data_path, best_epoch)
+
+      create_checkpoint(save_dir, epoch, noise_factor, best_fid, best_epoch, best_syn_data_path,
+                        opt_g, opt_d, net_g, net_d, global_step)
 
     if (epoch + 1) % arg.n_save_epochs == 0 and not epoch + 1 == arg.n_epochs:
       # sign off with error code 3
