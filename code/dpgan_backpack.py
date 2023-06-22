@@ -298,7 +298,8 @@ def create_checkpoint(log_dir, epoch, noise_scale, best_fid, best_epoch, best_sy
   ckpt['net_d'] = net_d.state_dict()
 
   pt.save(ckpt, os.path.join(log_dir, f'checkpoint.pt'))
-  pt.save(ckpt, os.path.join(log_dir, f'checkpoint_ep{epoch}.pt'))
+  if best_epoch == epoch:
+    pt.save(ckpt, os.path.join(log_dir, f'checkpoint_ep{epoch}.pt'))
 
 
 def load_checkpoint(checkpoint_path):
@@ -336,13 +337,17 @@ def print_fake_batch(arg, fake, data_scale, save_dir, file_name='clamped_plot.pn
   vutils.save_image(data_to_print, img_path_clamp, normalize=True, nrow=10)
 
 
-def update_best_score(fid, syn_data_path, epoch, best_fid, best_syn_data_path, best_epoch):
+def update_best_score(fid, syn_data_path, epoch, best_fid, best_syn_data_path, best_epoch, best_old_checkpoint_path):
   if best_fid is None or fid < best_fid:  # new best score
     if best_syn_data_path is not None:
       try:
         os.remove(best_syn_data_path)
       except FileNotFoundError:
         print(f'failed to delete syn data {best_syn_data_path}')
+      try:
+        os.remove(best_old_checkpoint_path)
+      except FileNotFoundError:
+        print(f'failed to delete checkpoint {best_old_checkpoint_path}')
     best_fid = fid
     best_epoch = epoch
     best_syn_data_path = syn_data_path
@@ -525,8 +530,10 @@ def main():
       print(f'fid={fid} at epoch={epoch}')
       np.save(os.path.join(save_dir, f'fid_ep{epoch}.npy'), fid)
 
+      best_old_checkpoint_path = os.path.join(save_dir, f'checkpoint_ep{best_epoch}.pt')
       best_fid, best_syn_data_path, best_epoch = update_best_score(fid, syn_data_path, epoch, best_fid,
-                                                                   best_syn_data_path, best_epoch)
+                                                                   best_syn_data_path, best_epoch,
+                                                                   best_old_checkpoint_path)
 
       create_checkpoint(save_dir, epoch, noise_factor, best_fid, best_epoch, best_syn_data_path,
                         opt_g, opt_d, net_g, net_d, global_step)
