@@ -1,4 +1,5 @@
 import os
+import sys
 import random
 import torch as pt
 import torch.nn as nn
@@ -353,11 +354,18 @@ def update_best_score(fid, syn_data_path, epoch, best_fid, best_syn_data_path, b
   return best_fid, best_syn_data_path, best_epoch
 
 
+def route_io_to_file(logdir, out_file_name, err_file_name):
+  sys.stdout = open(os.path.join(logdir, out_file_name), 'a')
+  sys.stderr = open(os.path.join(logdir, err_file_name), 'a')
+
+
 def main():
   arg = get_args()
   save_dir = os.path.join('../logs/dcgan/', arg.exp_name)
-
   os.makedirs(save_dir, exist_ok=True)
+
+  route_io_to_file(save_dir, out_file_name='out.txt', err_file_name='err.txt')
+
   print("Random Seed: ", arg.seed)
   random.seed(arg.seed)
   pt.manual_seed(arg.seed)
@@ -521,7 +529,7 @@ def main():
       best_fid, best_syn_data_path, best_epoch = update_best_score(fid, syn_data_path, epoch, best_fid,
                                                                    best_syn_data_path, best_epoch)
 
-    if (epoch + 1) % arg.n_save_epochs == 0:
+    if (epoch + 1) % arg.n_save_epochs == 0 and not epoch + 1 == arg.n_epochs:
       # sign off with error code 3
       print(f'preparing restart after epoch {epoch}')
       exit(3)
