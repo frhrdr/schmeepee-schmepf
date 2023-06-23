@@ -23,7 +23,7 @@ def load_sorted_fids(run_dir):
   for fid_file in saved_fids:
     fid_ep = int(fid_file[len('fid_ep'):-len('.npy')])
     try:
-      fid = np.load(fid = np.load(os.path.join(run_dir, fid_file)))
+      fid = np.load(os.path.join(run_dir, fid_file))
     except FileNotFoundError as fne:
       print(f'File not found: {fne}')
       fid = -1
