@@ -14,7 +14,7 @@ def load_best_fid(run_dir):
   except FileNotFoundError as fne:
     print(f'File not found: {fne}')
     fid = -1
-  return fid
+  return fid, best_fid_ep
 
 
 def load_sorted_fids(run_dir):
@@ -28,7 +28,7 @@ def load_sorted_fids(run_dir):
       print(f'File not found: {fne}')
       fid = -1
     ordered_fids[fid_ep] = fid
-    return ordered_fids
+  return ordered_fids
 
 
 def dcgan_results():
@@ -45,10 +45,10 @@ def dcgan_results():
   for idx in range(arg.n_runs):
     run_dir = f'../logs/dcgan/{arg.logdir}/run_{idx}/'
     # find best fid epoch
-    run_best_fid = load_best_fid(run_dir)
+    run_best_fid, run_best_fid_ep = load_best_fid(run_dir)
     sorted_fids = load_sorted_fids(run_dir)
     sorted_fid_str = ', '.join([f'{ep}:{fid:.2f}' for (ep, fid) in sorted_fids.items()])
-    print(f'run {idx} best fid={run_best_fid:.4f}  all fids={sorted_fid_str}')
+    print(f'run {idx} best fid at ep {run_best_fid_ep}={run_best_fid:.4f}  all fids={sorted_fid_str}')
     acc.append(run_best_fid)
     if 1 < arg.avgn == len(acc):
       if None in acc:
