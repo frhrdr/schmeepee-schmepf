@@ -60,7 +60,7 @@ def dcgan_results():
       else:
         print(f'average over {arg.avgn} runs: mean={np.mean(avg_acc):.4f}, sdev={np.std(avg_acc):.4f}')
       avg_acc = []
-    if best_result is None or run_best_fid < best_result:
+    if best_result is None or 0 < run_best_fid < best_result:
       best_result = run_best_fid
       best_run = idx
 

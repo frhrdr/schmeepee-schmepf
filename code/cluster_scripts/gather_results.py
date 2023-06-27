@@ -4,6 +4,7 @@ import argparse
 import pandas as pd
 import torch as pt
 
+
 def has_any_results(log_dir):
   run_dirs = [d for d in os.scandir(log_dir) if (d.is_dir() and d.name.startswith('run'))]
   for run in run_dirs:

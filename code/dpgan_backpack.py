@@ -49,7 +49,7 @@ def get_args():
   parser.add_argument('--target_delta', type=float, default=1e-6)
   parser.add_argument('--clip_norm', type=float, default=None)
 
-  parser.add_argument('--model', type=str, default='convnet', choices=['convnet', 'resnet'])
+  parser.add_argument('--model', type=str, default='resnet', choices=['convnet', 'resnet'])
   parser.add_argument('--exp_name', type=str)
   parser.add_argument('--pretrain_checkpoint', type=str, default=None)
   parser.add_argument('--single_iter', action='store_true')
