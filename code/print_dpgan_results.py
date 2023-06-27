@@ -6,7 +6,9 @@ from collections import OrderedDict
 
 def load_best_fid(run_dir):
   saved_checkpoints = [a for a in os.listdir(run_dir) if a.startswith('checkpoint_ep')]
-  assert len(saved_checkpoints) == 1
+  if len(saved_checkpoints) < 1:
+    print(f'best checkpoint unclear for {run_dir}')
+    return -1, -1
   best_fid_ep = int(saved_checkpoints[0][len('checkpoint_ep'):-len('.pt')])
   best_fid_file = f'fid_ep{best_fid_ep}.npy'
   try:
