@@ -43,7 +43,9 @@ def dcgan_results():
   parser.add_argument('--avgn', type=int, default=1)
   arg = parser.parse_args()
 
-  acc = []
+  best_result = None
+  best_run = None
+  avg_acc = []
   for idx in range(arg.n_runs):
     run_dir = f'../logs/dcgan/{arg.logdir}/run_{idx}/'
     # find best fid epoch
@@ -51,13 +53,18 @@ def dcgan_results():
     sorted_fids = load_sorted_fids(run_dir)
     sorted_fid_str = ', '.join([f'{ep}:{fid:.2f}' for (ep, fid) in sorted_fids.items()])
     print(f'run {idx} best fid at ep {run_best_fid_ep}={run_best_fid:.4f}  all fids={sorted_fid_str}')
-    acc.append(run_best_fid)
-    if 1 < arg.avgn == len(acc):
-      if None in acc:
+    avg_acc.append(run_best_fid)
+    if 1 < arg.avgn == len(avg_acc):
+      if None in avg_acc:
         print('result incomplete')
       else:
-        print(f'average over {arg.avgn} runs: mean={np.mean(acc):.4f}, sdev={np.std(acc):.4f}')
-      acc = []
+        print(f'average over {arg.avgn} runs: mean={np.mean(avg_acc):.4f}, sdev={np.std(avg_acc):.4f}')
+      avg_acc = []
+    if best_result is None or run_best_fid < best_result:
+      best_result = run_best_fid
+      best_run = idx
+
+  print(f'best overall result is FID={best_result:.4f} at run {best_run}')
 
 
 if __name__ == '__main__':
