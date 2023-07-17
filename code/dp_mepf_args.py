@@ -30,7 +30,7 @@ def get_args():
                       help='folder to output images and model checkpoints')
   parser.add_argument('--labeled', action='store_true', help='enables labeled data generation')
   parser.add_argument('--pretrain_dataset', default=None,
-                      choices=[None, 'imagenet', 'svhn', 'cifar10'], help='set automatically')
+                      choices=[None, 'imagenet', 'svhn', 'cifar10_pretrain'], help='set automatically')
 
   parser.add_argument('--gen_output', type=str, default='tanh', choices=['tanh', 'linear'],
                       help='tanh: output in range [-1,1]. linear: output unbounded')
@@ -245,8 +245,8 @@ def set_arg_dependencies(arg):
                           'dmnist': 'svhn', 'fmnist': 'cifar10_pretrain'}
   if arg.pretrain_dataset is None:
     arg.pretrain_dataset = pretrain_assignments[arg.dataset]
-  else:
-    assert arg.pretrain_dataset == pretrain_assignments[arg.dataset]
+  # else:
+  #   assert arg.pretrain_dataset == pretrain_assignments[arg.dataset]
 
   if arg.dataset in {'dmnist', 'fmnist'}:
     arg.net_gen_type = 'condconvgen'
