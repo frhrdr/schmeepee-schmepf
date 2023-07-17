@@ -513,9 +513,9 @@ class ConstMat(nn.Module):  # hacky way to get DDP to work with these single par
 
 def small_data_model(pretrain_data, model, device, image_size):
   if pretrain_data == 'cifar10_pretrain':
-    model_path = 'models/Trained_ResNet_cifar10'
+    model_path = '../models/Trained_ResNet_cifar10'
   else:
-    model_path = f'models/Trained_ResNet_{pretrain_data}'
+    model_path = f'../models/Trained_ResNet_{pretrain_data}'
   assert model == 'resnet18'
   # if model == 'VGG':
   #   net = VGG('VGG15')

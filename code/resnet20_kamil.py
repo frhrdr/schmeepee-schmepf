@@ -124,7 +124,7 @@ def resnet20(classes):
 
 
 def get_dp_resnet20(feats_dict, epsilon):
-  base_model_dir = 'models/'
+  base_model_dir = '../models/'
   pretrained_weights = {2: 'cifar_resnet_dp_1_epo:4_acc:25.93_eps2',
                         5: 'cifar_resnet_dp_1_epo:49_acc:49.51_eps5',
                         8: 'cifar_resnet_dp_1_epo:98_acc:54.03_eps8',
