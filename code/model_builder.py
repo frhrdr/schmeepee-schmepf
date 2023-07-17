@@ -516,7 +516,7 @@ def small_data_model(pretrain_data, model, device, image_size):
     model_path = '../models/Trained_ResNet_cifar10'
   else:
     model_path = f'../models/Trained_ResNet_{pretrain_data}'
-  assert model == 'resnet18'
+  assert model == 'resnet18', f'Wrong model type: {model}, should be resnet18'
   # if model == 'VGG':
   #   net = VGG('VGG15')
   #   net = net.to(device)
