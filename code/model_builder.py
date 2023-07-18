@@ -282,8 +282,8 @@ def get_torchvision_encoders(encoder_names, image_size, device, pretrain_dataset
   if pretrain_dataset in {'svhn', 'cifar10_pretrain'} and encoder_names[0] == 'resnet18':
     assert len(encoder_names) == 1
     # return small_data_model(pretrain_dataset, encoder_names[0], device, image_size)
-    small_data_encoder(pretrain_dataset, feats_dict, n_split_layers, device, n_classes, input_scalings, image_size,
-                       is_grayscale)
+    return small_data_encoder(pretrain_dataset, feats_dict, n_split_layers, device, n_classes, input_scalings,
+                              image_size, is_grayscale)
   else:
     assert pretrain_dataset == 'imagenet'
 
