@@ -242,12 +242,12 @@ def main():
 
   encoders = get_torchvision_encoders(arg.net_enc_type, arg.image_size, device,
                                       arg.pretrain_dataset, arg.n_classes_in_enc,
-                                      arg.n_split_layers, n_classes, train_enc_input_scalings)
+                                      arg.n_split_layers, n_classes, train_enc_input_scalings, arg.dataset)
 
   if arg.val_enc is not None:
     val_encoders = get_torchvision_encoders(arg.val_enc, arg.image_size, device,
                                             'imagenet', arg.n_classes_in_enc,
-                                            arg.n_split_layers, n_classes)
+                                            arg.n_split_layers, n_classes, arg.dataset)
   else:
     val_encoders = encoders
 

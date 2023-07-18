@@ -7,7 +7,7 @@ import torch.nn.functional as nnf
 from encoders_class import Encoders
 from generators import ResnetG
 from resnet20_kamil import get_dp_resnet20
-from resnet import resnet_18
+from resnet import resnet_18, resnet_18_encoder
 from util_logging import LOG
 import torchvision.models as pt_models
 # from models.ae_encoder import ConvEncoderSkipConnections
@@ -274,14 +274,18 @@ def set_layer_hook(model_name, layer, layer_name, feats_dict):
 
 
 def get_torchvision_encoders(encoder_names, image_size, device, pretrain_dataset, n_classes_in_enc,
-                             n_split_layers, n_classes, input_scalings=None):
-  if pretrain_dataset in {'svhn', 'cifar10_pretrain'} and encoder_names[0] == 'resnet18':
-    assert len(encoder_names) == 1
-    return small_data_model(pretrain_dataset, encoder_names[0], device, image_size)
-  else:
-    assert pretrain_dataset == 'imagenet'
+                             n_split_layers, n_classes, input_scalings, dataset_name):
   feats_dict = OrderedDict()
   models_dict = dict()
+  is_grayscale = dataset_name in {'dmnist', 'fmnist'}
+
+  if pretrain_dataset in {'svhn', 'cifar10_pretrain'} and encoder_names[0] == 'resnet18':
+    assert len(encoder_names) == 1
+    # return small_data_model(pretrain_dataset, encoder_names[0], device, image_size)
+    small_data_encoder(pretrain_dataset, feats_dict, n_split_layers, device, n_classes, input_scalings, image_size,
+                       is_grayscale)
+  else:
+    assert pretrain_dataset == 'imagenet'
 
   for encoder_name in encoder_names:
     if encoder_name == 'resnet18':
@@ -537,3 +541,28 @@ def small_data_model(pretrain_data, model, device, image_size):
     param.requires_grad = False
 
   return [net]
+
+
+def small_data_encoder(pretrain_data, feats_dict, n_split_layers, device, n_classes, input_scalings, image_size,
+                       is_grayscale):
+  if pretrain_data in {'cifar10_pretrain', 'cifar10'}:
+    model_path = '../models/Trained_ResNet_cifar10'
+  else:
+    model_path = f'../models/Trained_ResNet_{pretrain_data}'
+
+  enc = resnet_18_encoder(feats_dict, num_classes=10, image_size=image_size,
+                          grayscale_input=is_grayscale).to(device)
+  checkpoint = pt.load(model_path)
+  enc.load_state_dict(checkpoint['model_state_dict'], strict=False)
+
+  for param in enc.parameters():
+    param.requires_grad = False
+
+  enc_name = f'resnet18_{pretrain_data}'
+  models_dict = {enc_name: enc}
+  enc.to(device)
+  enc.eval()
+  LOG.info(f'# Encoder :{enc_name}')
+  for param in enc.parameters():
+    param.requires_grad = False
+  return Encoders(models_dict, feats_dict, n_split_layers, device, n_classes, input_scalings)

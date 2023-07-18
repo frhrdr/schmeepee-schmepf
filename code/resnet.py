@@ -116,6 +116,12 @@ class ResNet(nn.Module):
     layer.register_forward_hook(myhook)
 
 
+def set_layer_hook(model_name, layer, layer_name, feats_dict):
+  def hook(_model, _input, output):
+    feats_dict[f'{model_name}_{layer_name}'] = output
+  layer.register_forward_hook(hook)
+
+
 def resnet_18(get_perceptual_feats=False, num_classes=10, image_size=32, grayscale_input=False):
   net = ResNet(BasicBlock, [2, 2, 2, 2], num_classes=num_classes, image_size=image_size,
                get_perceptual_feats=get_perceptual_feats, grayscale_input=grayscale_input)
@@ -137,4 +143,31 @@ def resnet_18(get_perceptual_feats=False, num_classes=10, image_size=32, graysca
     img_size_l, n_feats_l = get_image_size_n_feats(net, image_size=image_size)
     net.image_size_per_layer = np.array(img_size_l)
     net.n_features_per_layer = np.array(n_feats_l)
+  return net
+
+
+def resnet_18_encoder(feats_dict, num_classes=10, image_size=32, grayscale_input=False):
+
+  net = ResNet(BasicBlock, [2, 2, 2, 2], num_classes=num_classes, image_size=image_size,
+               get_perceptual_feats=True, grayscale_input=grayscale_input)
+
+  img_size_l, n_feats_l = get_image_size_n_feats(net, image_size=image_size)
+  net.image_size_per_layer = np.array(img_size_l)
+  net.n_features_per_layer = np.array(n_feats_l)
+
+  # registers a hook for each RELU layer
+  layer_num = 0
+  for feature_layers in [net.layer1, net.layer2, net.layer3, net.layer4]:
+    for res_block in feature_layers:
+      for modl in res_block.modules():
+        if str(modl)[0:4] == 'ReLU':
+          LOG.debug("# registering hook module {} ".format(str(modl)))
+          set_layer_hook('resnet18', modl, layer_num, feats_dict)
+          # net._get_hook(layer_num, modl)
+          layer_num += 1
+
+  img_size_l, n_feats_l = get_image_size_n_feats(net, image_size=image_size)
+  net.image_size_per_layer = np.array(img_size_l)
+  net.n_features_per_layer = np.array(n_feats_l)
+
   return net
