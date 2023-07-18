@@ -554,6 +554,7 @@ def small_data_encoder(pretrain_data, feats_dict, n_split_layers, device, n_clas
                           grayscale_input=is_grayscale).to(device)
   checkpoint = pt.load(model_path)
   enc.load_state_dict(checkpoint['model_state_dict'], strict=False)
+  LOG.info(f'# loaded weights from path:{model_path}')
 
   for param in enc.parameters():
     param.requires_grad = False
