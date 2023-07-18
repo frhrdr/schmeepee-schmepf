@@ -558,7 +558,7 @@ def small_data_encoder(pretrain_data, feats_dict, n_split_layers, device, n_clas
   for param in enc.parameters():
     param.requires_grad = False
 
-  enc_name = f'resnet18_{pretrain_data}'
+  enc_name = 'resnet18'
   models_dict = {enc_name: enc}
   enc.to(device)
   enc.eval()
